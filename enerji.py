@@ -46,4 +46,50 @@ if menu == "📟 OSOS Sayaç Ayarları":
 # --- 2. INVERTER / TÜRBİN BAĞLANTISI ---
 elif menu == "🔌 Inverter/Türbin Bağlantısı":
     if "GES" in santral_turu:
-        st.header(f
+        st.header(f"🔌 {secilen_santral} - Sungrow Inverter API")
+        with st.form("ges_api"):
+            st.text_input("iSolarCloud AppKey")
+            st.text_input("Plant ID (Santral No)")
+            st.form_submit_button("GES Verilerini Senkronize Et")
+    else:
+        st.header(f"🌀 {secilen_santral} - Türbin & SCADA Bağlantısı")
+        with st.form("hes_api"):
+            st.text_input("HES SCADA IP Adresi")
+            st.text_input("Türbin Modbus ID")
+            st.form_submit_button("HES Verilerini Senkronize Et")
+
+# --- 3. ANA DASHBOARD ---
+elif menu == "📊 Genel Dashboard":
+    st.title(f"📈 {secilen_santral} - Performans Paneli")
+    
+    # Üretim Özet Kartları
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Anlık Üretim", "450 kW", "+12 kW")
+    c2.metric("Günlük Toplam", "3.2 MWh", "0.4 MWh")
+    c3.metric("OSOS Sayaç", "3.15 MWh")
+    c4.metric("Sistem Kaybı", "%1.5", "-0.2%", delta_color="normal")
+
+    # Saatlik Karşılaştırma Grafiği
+    st.subheader("Saatlik OSOS vs Inverter Kıyaslaması")
+    saatler = [f"{i}:00" for i in range(24)]
+    # Örnek veri
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=saatler, y=[0,0,0,0,0,10,100,300,500,700,850,900,880,700,400,150,20,0,0,0,0,0,0,0], 
+                             name="Inverter (Otomatik)", line=dict(color='orange', width=3)))
+    fig.add_trace(go.Scatter(x=saatler, y=[0,0,0,0,0,8,95,280,480,680,830,880,860,680,380,140,15,0,0,0,0,0,0,0], 
+                             name="OSOS (Sayaç)", line=dict(color='blue', dash='dash')))
+    
+    st.plotly_chart(fig, use_container_width=True)
+
+# --- 4. MANUEL VERİ GİRİŞİ ---
+elif menu == "📝 Manuel Veri Girişi":
+    st.header(f"📝 {secilen_santral} - Manuel Veri Düzenleme")
+    st.write("Otomatik verilerin gelmediği durumlarda burayı kullanın.")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.date_input("Tarih")
+        st.number_input("Manuel İnverter Girişi (kWh)")
+    with col2:
+        st.time_input("Saat")
+        st.number_input("Manuel Sayaç Girişi (kWh)")
+    st.button("Veriyi Sisteme İşle")
