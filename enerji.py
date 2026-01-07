@@ -2,81 +2,78 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime
+import time
 
-# --- KULLANICI GİRİŞ AYARLARI ---
-# Buradaki kullanıcı adı ve şifreyi kendine göre değiştirebilirsin
-USER_LOGIN = "admin"
-USER_PASS = "enerji123"
+# --- PANEL AYARLARI ---
+st.set_page_config(page_title="Enerji Otomasyon Paneli", layout="wide")
 
-st.set_page_config(page_title="HES/GES Yönetim Paneli", layout="wide")
+# --- SOL MENÜ (NAVİGASYON) ---
+st.sidebar.title("🚀 Enerji Yönetim Merkezi")
+menu = st.sidebar.radio("Giriş Panelleri", ["📊 Ana Dashboard", "📟 OSOS Sayaç Girişi", "🔌 Inverter Giriş Ekranı", "⚙️ Ayarlar"])
 
-# --- GİRİŞ KONTROLÜ ---
-if "authenticated" not in st.session_state:
-    st.session_state["authenticated"] = False
-
-def login():
-    st.title("🔐 Santral Yönetim Girişi")
-    user = st.text_input("Kullanıcı Adı")
-    pw = st.text_input("Şifre", type="password")
-    if st.button("Giriş Yap"):
-        if user == USER_LOGIN and pw == USER_PASS:
-            st.session_state["authenticated"] = True
-            st.rerun()
-        else:
-            st.error("Hatalı kullanıcı adı veya şifre!")
-
-if not st.session_state["authenticated"]:
-    login()
-else:
-    # --- ANA PANEL ---
-    st.sidebar.title("🛠️ Veri Giriş Ekranı")
-    st.sidebar.write(f"Hoş geldin, **{USER_LOGIN}**")
+# --- 1. OSOS GİRİŞ EKRANI ---
+if menu == "📟 OSOS Sayaç Girişi":
+    st.header("OSOS Otomatik Sayaç Bağlantısı")
+    st.info("Resmi sayaç verilerini çekmek için OSOS kullanıcı bilgilerinizi giriniz.")
     
-    if st.sidebar.button("Güvenli Çıkış"):
-        st.session_state["authenticated"] = False
-        st.rerun()
-
-    st.title("☀️ GES & 💧 HES Veri Takip Sistemi")
-
-    # 1. MANUEL VERİ GİRİŞİ (SOL MENÜ)
-    with st.sidebar.form("veri_formu"):
-        tarih = st.date_input("Analiz Tarihi", datetime.now())
-        st.write("---")
-        st.subheader("İnvertör Verileri")
-        inv_kwh = st.number_input("İnvertör Toplam (kWh)", min_value=0.0)
+    with st.form("osos_form"):
+        kullanici = st.text_input("OSOS Kullanıcı Adı")
+        sifre = st.text_input("OSOS Şifre", type="password")
+        sayac_no = st.text_input("Sayaç Seri No")
+        bağlan = st.form_submit_button("OSOS Sistemine Bağlan")
         
-        st.subheader("Sayaç Verileri")
-        sayac_kwh = st.number_input("Resmi Sayaç (kWh)", min_value=0.0)
+        if bağlan:
+            st.warning("OSOS Sistemine bağlantı isteği gönderildi... (API onayı bekleniyor)")
+
+# --- 2. INVERTER GİRİŞ EKRANI ---
+elif menu == "🔌 Inverter Giriş Ekranı":
+    st.header("Sungrow iSolarCloud Entegrasyonu")
+    st.info("İnverter üretim verilerini saatlik çekmek için API bilgilerini giriniz.")
+    
+    with st.form("inverter_form"):
+        api_user = st.text_input("Sungrow Kullanıcı Adı")
+        api_pass = st.text_input("Sungrow Şifre", type="password")
+        plant_id = st.text_input("Santral (Plant) ID")
+        guncelleme_sikligi = st.selectbox("Veri Çekme Sıklığı", ["1 Saatlik", "15 Dakikalık", "Günlük"])
         
-        submit = st.form_submit_button("Sisteme İşle ve Kaydet")
+        kaydet = st.form_submit_button("API Bağlantısını Doğrula")
+        
+        if kaydet:
+            st.success(f"Sungrow Santral ID {plant_id} başarıyla tanımlandı.")
 
-    # 2. HESAPLAMA VE GÖSTERİM
-    if inv_kwh > 0 and sayac_kwh > 0:
-        fark = inv_kwh - sayac_kwh
-        kayip_orani = (fark / inv_kwh) * 100
+# --- 3. ANA DASHBOARD (OTOMATİK VERİ GÖSTERİMİ) ---
+elif menu == "📊 Ana Dashboard":
+    st.title("Gerçek Zamanlı Üretim & Sayaç Analizi")
+    
+    # Otomatik Veri Çekme Butonu
+    if st.button("🔄 Verileri Şimdi Güncelle"):
+        with st.spinner('OSOS ve Sungrow verileri senkronize ediliyor...'):
+            time.sleep(2) # Simülasyon
+            st.success("Saatlik veriler başarıyla güncellendi!")
 
-        # Üst Özet Kartları
-        c1, c2, c3 = st.columns(3)
-        c1.metric("İnvertör Toplam", f"{inv_kwh} kWh")
-        c2.metric("Sayaç Toplam", f"{sayac_kwh} kWh")
-        c3.metric("Fark / Kayıp", f"%{round(kayip_orani, 2)}", delta=f"{round(fark, 1)} kWh", delta_color="inverse")
-
-        # Karşılaştırma Grafiği
-        fig = go.Figure(data=[
-            go.Bar(name='İnvertör', x=['Üretim Kıyaslama'], y=[inv_kwh], marker_color='#FFA500'),
-            go.Bar(name='Sayaç', x=['Üretim Kıyaslama'], y=[sayac_kwh], marker_color='#1E90FF')
-        ])
-        fig.update_layout(barmode='group', height=450)
+    # Örnek Grafik ve Karşılaştırma
+    c1, c2 = st.columns(2)
+    
+    with c1:
+        st.subheader("Saatlik Üretim Grafiği")
+        # Örnek saatlik veri
+        saatler = [f"{i}:00" for i in range(8, 18)]
+        uretim = [10, 50, 150, 400, 650, 800, 750, 450, 200, 50]
+        fig = go.Figure(data=[go.Scatter(x=saatler, y=uretim, mode='lines+markers', name='Üretim (kWh)')])
         st.plotly_chart(fig, use_container_width=True)
 
-        # Durum Analizi
-        if kayip_orani > 5:
-            st.warning(f"⚠️ Kayıp Oranı Yüksek! (%{round(kayip_orani, 2)}) Sayaç veya kablo bağlantılarını kontrol edin.")
-        else:
-            st.success("✅ Veriler Tutarlı. Kayıp oranı normal sınırlar içerisinde.")
-    else:
-        st.info("👈 Lütfen sol menüden güncel sayaç ve invertör değerlerini girerek 'Sisteme İşle' butonuna basın.")
+    with c2:
+        st.subheader("Sayaç vs Inverter Farkı")
+        # Örnek fark grafiği
+        fig2 = go.Figure(data=[
+            go.Bar(name='Inverter', x=['Toplam'], y=[4500]),
+            go.Bar(name='Sayaç', x=['Toplam'], y=[4410])
+        ])
+        st.plotly_chart(fig2, use_container_width=True)
 
-    # Alt Bilgi
-    st.divider()
-    st.caption(f"Veri Giriş Saati: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+# --- 4. AYARLAR ---
+elif menu == "⚙️ Ayarlar":
+    st.header("Sistem Ayarları")
+    st.write("E-posta Bildirimleri")
+    st.checkbox("Veri farkı %5'i geçerse SMS gönder")
+    st.checkbox("Gün sonu raporunu PDF olarak mail at")
